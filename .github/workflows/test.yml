@@ -58,4 +58,4 @@ jobs:
           test "$REFUSED" = 2
           test "$FINDING_SARIF" = finding.sarif
           test -s report.json
-          node -e 'const s=require("./finding.sarif"); if (s.version !== "2.1.0" || !s.runs[0].results.length) process.exit(1)'
+          node -e 'const s=JSON.parse(require("fs").readFileSync("finding.sarif","utf8")); if (s.version !== "2.1.0" || !s.runs[0].results.length) process.exit(1)'
