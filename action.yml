@@ -1,0 +1,69 @@
+name: "ProtocolProbe self-test"
+description: "Run ProtocolProbe's MCP server checks against YOUR OWN stdio MCP server in CI. Results stay in your workflow."
+author: "ProtocolProbe"
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  command:
+    description: "Command line that starts YOUR MCP server over stdio, e.g. `node ./dist/server.js`. Split on spaces; quoting is not supported (use a script file for complex commands)."
+    required: true
+  version:
+    description: "Exact protocolprobe-selftest version to run (npm). Pinned on purpose."
+    required: false
+    default: "0.4.0"
+  fail-on-finding:
+    description: "Fail the step (exit 5) when a check needs attention (VULNERABLE or FOUND)."
+    required: false
+    default: "true"
+  sarif:
+    description: "Path of the SARIF 2.1.0 file to write (for GitHub code scanning). Empty to skip."
+    required: false
+    default: "protocolprobe-selftest.sarif"
+  sarif-anchor:
+    description: "File that SARIF results point at (line 1). Default: the first file of `command` inside the working directory."
+    required: false
+    default: ""
+  out:
+    description: "Path of the JSON report to write. Empty to skip."
+    required: false
+    default: ""
+  allow-mutating:
+    description: "Also run the check that calls tools which may change data (only on a disposable test server)."
+    required: false
+    default: "false"
+  allow-fuzzing:
+    description: "Also run the check that sends malformed input to your tools."
+    required: false
+    default: "false"
+  working-directory:
+    description: "Folder to run in (paths in `command`, `sarif` and `out` are relative to it)."
+    required: false
+    default: "."
+
+outputs:
+  exit-code:
+    description: "Exit code of protocolprobe-selftest (0 result, 1 could not start, 2 refused arguments, 5 finding with fail-on-finding)."
+    value: ${{ steps.run.outputs.exit-code }}
+  sarif-file:
+    description: "Path of the SARIF file written, if any."
+    value: ${{ steps.run.outputs.sarif-file }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      # Inputs reach the script only through environment variables, never interpolated into the script text.
+      env:
+        PP_COMMAND: ${{ inputs.command }}
+        PP_VERSION: ${{ inputs.version }}
+        PP_FAIL_ON_FINDING: ${{ inputs.fail-on-finding }}
+        PP_SARIF: ${{ inputs.sarif }}
+        PP_SARIF_ANCHOR: ${{ inputs.sarif-anchor }}
+        PP_OUT: ${{ inputs.out }}
+        PP_ALLOW_MUTATING: ${{ inputs.allow-mutating }}
+        PP_ALLOW_FUZZING: ${{ inputs.allow-fuzzing }}
+      run: bash "$GITHUB_ACTION_PATH/run.sh"
