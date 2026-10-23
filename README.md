@@ -34,7 +34,8 @@ jobs:
           sarif-anchor: src/server.ts
 
       - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
-        if: always()   # upload also when the self-test step failed because of a finding
+        # upload also when the self-test step failed because of a finding, but only if a SARIF file was written
+        if: always() && hashFiles('protocolprobe-selftest.sarif') != ''
         with:
           sarif_file: protocolprobe-selftest.sarif
           category: protocolprobe-selftest
@@ -53,10 +54,10 @@ Python server (needs [uv](https://docs.astral.sh/uv/) on the runner):
 | input | default | meaning |
 |---|---|---|
 | `command` | (required) | Command line that starts your MCP server over stdio. Split on spaces; quoting is not supported, so put a complex command in a script file. |
-| `version` | `0.4.0` | Exact `protocolprobe-selftest` version from npm. Ranges and tags are refused. |
+| `version` | `0.4.0` | Exact `protocolprobe-selftest` version from npm, 0.4.0 or later (earlier versions lack `--fail-on-finding` and `--sarif`). Ranges and tags are refused. |
 | `fail-on-finding` | `true` | Fail the step (exit 5) when a check needs attention (`VULNERABLE` or `FOUND`). |
 | `sarif` | `protocolprobe-selftest.sarif` | SARIF 2.1.0 file to write. Empty to skip. |
-| `sarif-anchor` | | File the SARIF results point at (line 1). Without it GitHub cannot display them. |
+| `sarif-anchor` | | File the SARIF results point at (line 1). Default: the first file of `command` inside the working directory. Set it when that file is build output (for example `dist/`) that is not in the repository. |
 | `out` | | JSON report to write. Empty to skip. |
 | `allow-mutating` | `false` | Also run the check that calls tools which may change data. Only on a disposable test server. |
 | `allow-fuzzing` | `false` | Also run the check that sends malformed input to your tools. |
@@ -74,8 +75,19 @@ Outputs: `exit-code` (0 result printed, 1 could not start or connect, 2 refused 
   offered here.
 - The score counts only checks that ran; a check that did not run says nothing about that behaviour. A clean result is
   not a certificate of safety.
+- Network: the only outbound traffic is the npm download of the package, plus whatever your own server does. Your
+  server is started with a minimal environment, so the runner's secrets are not passed to it.
 - Inputs reach the script only as environment variables and are validated; the command is never run through a shell
   string or `eval`.
+
+## Versioning
+
+`v1` moves to the newest `v1.x.y` release; `v1.x.y` tags never move. To pin exactly, use the commit SHA:
+`uses: Sultan57git/protocolprobe-selftest-action@<full commit SHA> # v1.0.0`.
+
+## Security
+
+Report a problem with this action to hello@protocolprobe.com (see SECURITY.md).
 
 ## Licence
 

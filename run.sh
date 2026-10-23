@@ -3,7 +3,15 @@
 # variable (see action.yml) and is validated here; nothing is passed through eval or a shell string.
 set -uo pipefail
 
-fail() { echo "::error title=ProtocolProbe self-test::$1"; exit 2; }
+# messages may contain input values: encode % and drop CR/LF so a value cannot start a new workflow command
+fail() {
+  local m="${1//%/%25}"
+  m="${m//$'\r'/}"
+  m="${m//$'\n'/ }"
+  echo "::error title=ProtocolProbe self-test::$m"
+  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then printf 'exit-code=2\nsarif-file=\n' >> "$GITHUB_OUTPUT"; fi
+  exit 2
+}
 bool() { case "$1" in true|false) ;; *) fail "$2 must be true or false, got '$1'";; esac; }
 
 : "${PP_COMMAND:=}" "${PP_VERSION:=0.4.0}" "${PP_FAIL_ON_FINDING:=true}" "${PP_SARIF:=}" "${PP_SARIF_ANCHOR:=}"

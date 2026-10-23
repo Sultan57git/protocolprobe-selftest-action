@@ -10,7 +10,7 @@ inputs:
     description: "Command line that starts YOUR MCP server over stdio, e.g. `node ./dist/server.js`. Split on spaces; quoting is not supported (use a script file for complex commands)."
     required: true
   version:
-    description: "Exact protocolprobe-selftest version to run (npm). Pinned on purpose."
+    description: "Exact protocolprobe-selftest version to run (npm), 0.4.0 or later. Pinned on purpose."
     required: false
     default: "0.4.0"
   fail-on-finding:

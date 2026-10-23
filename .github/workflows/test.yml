@@ -1,0 +1,61 @@
+name: test
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  action:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+        working-directory: test
+
+      - name: clean run (expect exit 0)
+        id: clean
+        uses: ./
+        with:
+          command: node test/fixture-server.mjs
+          out: report.json
+
+      - name: finding run (expect exit 5)
+        id: finding
+        continue-on-error: true
+        uses: ./
+        with:
+          command: node test/fixture-server.mjs
+          allow-mutating: "true"
+          sarif: finding.sarif
+
+      - name: refused input (expect exit 2)
+        id: refused
+        continue-on-error: true
+        uses: ./
+        with:
+          command: node test/fixture-server.mjs
+          version: latest
+
+      - name: check outcomes
+        shell: bash
+        env:
+          CLEAN: ${{ steps.clean.outputs.exit-code }}
+          FINDING: ${{ steps.finding.outputs.exit-code }}
+          FINDING_SARIF: ${{ steps.finding.outputs.sarif-file }}
+          REFUSED: ${{ steps.refused.outputs.exit-code }}
+        run: |
+          set -eu
+          echo "clean=$CLEAN finding=$FINDING refused=$REFUSED sarif=$FINDING_SARIF"
+          test "$CLEAN" = 0
+          test "$FINDING" = 5
+          test "$REFUSED" = 2
+          test "$FINDING_SARIF" = finding.sarif
+          test -s report.json
+          node -e 'const s=require("./finding.sarif"); if (s.version !== "2.1.0" || !s.runs[0].results.length) process.exit(1)'
